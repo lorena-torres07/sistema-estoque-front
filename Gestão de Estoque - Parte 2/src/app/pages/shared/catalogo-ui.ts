@@ -26,7 +26,7 @@ export function validarPreco(control: AbstractControl) {
 export function mensagemErro(erro: unknown, padrao: string) {
   if (erro instanceof HttpErrorResponse) {
     if (erro.status === 0) return 'A API está inacessível. Verifique a conexão e tente de novo.';
-    const mensagem: unknown = erro.error?.detail ?? erro.error?.message;
+    const mensagem: unknown = erro.error?.mensagem ?? erro.error?.detail ?? erro.error?.message;
     if (erro.status >= 400 && erro.status < 500 && typeof mensagem === 'string' && mensagem.trim()) {
       return mensagem;
     }
