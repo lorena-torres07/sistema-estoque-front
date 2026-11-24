@@ -46,18 +46,23 @@ export class ProdutosPage {
     const termo = normalizarNome(this.busca());
     const id = this.categoriaSelecionada();
     return this.produtos().filter(item =>
-      (id === null || item.categoriaId === id) && normalizarNome(item.nome).includes(termo),
+      (id === null || item.categoriaId === id) &&
+      (normalizarNome(item.nome).includes(termo) || (item.codigoBarras ?? '').includes(this.busca().trim())),
     );
   });
 
   protected readonly form = this.forms.nonNullable.group({
     nome: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)]],
     preco: ['', [Validators.required, validarPreco]],
+    estoqueMinimo: ['5', [Validators.required, Validators.pattern(/^\d+$/), Validators.max(2147483647)]],
     categoriaId: this.forms.control<number | null>(null, Validators.required),
     codigoBarras: ['', [Validators.pattern(/^\d{8,14}$/)]],
   });
 
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.busca.set(params.get('busca') ?? '');
+    });
     this.carregar();
   }
 
@@ -88,6 +93,16 @@ export class ProdutosPage {
     });
   }
 
+  protected limparFiltros() {
+    this.busca.set('');
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { busca: null, categoria: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
   protected abrirForm(produto: Produto | null = null) {
     this.removendo.set(null);
     this.editando.set(produto);
@@ -95,6 +110,7 @@ export class ProdutosPage {
     this.form.reset({
       nome: produto?.nome ?? '',
       preco: produto ? String(produto.preco).replace('.', ',') : '',
+      estoqueMinimo: String(produto?.estoqueMinimo ?? 5),
       categoriaId: produto?.categoriaId ?? this.categoriaSelecionada(),
       codigoBarras: produto?.codigoBarras ?? '',
     });
@@ -118,7 +134,7 @@ export class ProdutosPage {
   protected salvar() {
     if (this.ocupado()) return;
     this.form.markAllAsTouched();
-    const { nome, preco: precoDigitado, categoriaId, codigoBarras } = this.form.getRawValue();
+    const { nome, preco: precoDigitado, estoqueMinimo, categoriaId, codigoBarras } = this.form.getRawValue();
     const preco = lerPreco(precoDigitado);
     if (this.form.invalid || preco === null || categoriaId === null) return;
     if (!this.categoriasPorId().has(categoriaId)) {
@@ -128,7 +144,7 @@ export class ProdutosPage {
     const id = this.editando()?.id ?? null;
     this.ocupado.set(true);
     this.erroDialogo.set('');
-    this.api.salvarProduto(id, { nome: nome.trim(), preco, categoriaId, codigoBarras: codigoBarras || null })
+    this.api.salvarProduto(id, { nome: nome.trim(), preco, estoqueMinimo: Number(estoqueMinimo), categoriaId, codigoBarras: codigoBarras || null })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.finalizar(id === null ? 'Produto cadastrado.' : 'Produto atualizado.'),

@@ -18,9 +18,9 @@
   <div class="painel" [attr.aria-busy]="carregando()">
     <div class="filtros">
       <label class="busca">
-        <span>Buscar por nome</span>
+        <span>Buscar por nome ou código</span>
         <span class="campo-busca">
-          <input type="search" placeholder="Ex.: café" [value]="busca()" (input)="busca.set(buscaInput.value)" #buscaInput>
+          <input type="search" placeholder="Ex.: café ou código de barras" [value]="busca()" (input)="busca.set(buscaInput.value)" #buscaInput>
         </span>
       </label>
       <label>
@@ -41,7 +41,7 @@
       <div class="estado">
         @if (busca().trim() || categoriaSelecionada() !== null) {
           <p>Nenhum produto corresponde aos filtros.</p>
-          <button class="secundario" (click)="busca.set(''); filtrarCategoria('')">Limpar filtros</button>
+          <button class="secundario" (click)="limparFiltros()">Limpar filtros</button>
         } @else {
           <p>Nenhum produto cadastrado.</p>
         }
@@ -113,6 +113,11 @@
             @if (form.controls.preco.touched && form.controls.preco.invalid) { <small class="erro" id="erro-produto-preco">Informe um valor a partir de zero, com até 2 casas decimais.</small> }
           </label>
         </div>
+        <label>Estoque mínimo (unidades)
+          <input formControlName="estoqueMinimo" inputmode="numeric" placeholder="5" required
+            [attr.aria-invalid]="form.controls.estoqueMinimo.touched && form.controls.estoqueMinimo.invalid" aria-describedby="erro-produto-estoque-minimo">
+          @if (form.controls.estoqueMinimo.touched && form.controls.estoqueMinimo.invalid) { <small class="erro" id="erro-produto-estoque-minimo">Informe um número inteiro a partir de zero.</small> }
+        </label>
         <label>Código de barras (opcional)
           <input formControlName="codigoBarras" autocomplete="off" inputmode="numeric" maxlength="14"
             [attr.aria-invalid]="form.controls.codigoBarras.touched && form.controls.codigoBarras.invalid" aria-describedby="erro-produto-codigo">
