@@ -34,3 +34,9 @@ Os endpoints vêm do planejamento da equipe. Os DTOs abaixo são as suposições
 3. Confira se `provideHttpClient()` já está nos providers do app. Para trocar a URL base de `/api`, forneça `{ provide: CATALOGO_API_URL, useValue: 'http://localhost:8080/api' }` e configure CORS no Spring se as origens diferirem.
 4. Para usar a mesma tipografia, instale `@fontsource/dm-sans` e `@fontsource/dm-serif-text` e copie os imports de fonte de `src/styles.css`. As folhas das telas já incluem fontes de sistema de reserva.
 
+## Publicar na Vercel
+
+Ao importar este repositório, selecione a pasta `Gestão de Estoque - Parte 2` como Root Directory. O arquivo `vercel.json` configura a compilação Angular, a pasta publicada e o acesso direto às rotas de Produtos e Categorias.
+
+Para os cadastros funcionarem na URL publicada, hospede a API Spring Boot e encaminhe `/api/:path*` para os endpoints HTTPS correspondentes com uma regra de rewrite na Vercel. O proxy local de `proxy.conf.json` é usado pelo servidor de desenvolvimento. A URL publicada depende dessa configuração da API para consultar e gravar os registros.
+
