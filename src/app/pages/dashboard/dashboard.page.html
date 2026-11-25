@@ -40,7 +40,7 @@
         <p>Produtos com estoque baixo</p>
         <strong>{{ numero(estoqueBaixo().length) }}</strong>
         <small>{{ estoqueBaixo().length === 1 ? 'item em atenção' : 'itens em atenção' }}</small>
-        @if (estoqueBaixo().length) { <a href="#alertas">Ver itens em atenção <span aria-hidden="true">→</span></a> }
+        @if (estoqueBaixo().length) { <a routerLink="/produtos" [queryParams]="{ estoque: 'baixo' }">Ver itens em atenção <span aria-hidden="true">→</span></a> }
       </article>
     </div>
 

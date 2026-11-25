@@ -1,88 +1,133 @@
 <section class="catalogo" aria-labelledby="titulo-categorias">
-  <header class="cabecalho">
-    <div>
-      <h1 id="titulo-categorias">Categorias<span>.</span></h1>
-      <p>Organize os produtos por seção.</p>
-    </div>
-    <button class="primario" type="button" (click)="abrirForm()" [disabled]="carregando() || !!falha()">
-      <span aria-hidden="true" class="mais">+</span> Nova categoria
-    </button>
+  <header class="catalogo-cabecalho">
+    <h1 id="titulo-categorias">Gestão de Estoque</h1>
+    <p>Cadastre produtos, organize categorias e controle sua operação.</p>
   </header>
-  @if (aviso()) { <p class="aviso" role="status">{{ aviso() }}</p> }
+  <nav class="catalogo-abas" aria-label="Seções do catálogo">
+    <a class="aba" routerLink="/produtos">Produtos <span>{{ totalProdutos() }}</span></a>
+    <a class="aba ativa" routerLink="/categorias" aria-current="page">Categorias <span>{{ categorias().length }}</span></a>
+  </nav>
 
-  <div [attr.aria-busy]="carregando()">
+  <div class="catalogo-painel" [attr.aria-busy]="carregando()">
+    <div class="catalogo-barra">
+      <label class="busca-campo">
+        <span class="sr-only">Buscar categoria</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        <input type="search" placeholder="Buscar categoria..." [value]="busca()" (input)="buscar(buscaInput.value)" #buscaInput>
+      </label>
+      <button class="primario botao-adicionar" type="button" (click)="abrirForm()" [disabled]="carregando() || !!falha()">
+        <span aria-hidden="true" class="mais">+</span> Nova Categoria
+      </button>
+    </div>
     @if (carregando()) {
-      <div class="painel estado" role="status">Carregando categorias…</div>
+      <div class="estado" role="status">Carregando categorias…</div>
     } @else if (falha()) {
-      <div class="painel estado"><p role="alert">{{ falha() }}</p><button class="secundario" (click)="carregar()">Tentar de novo</button></div>
-    } @else if (!categorias().length) {
-      <div class="painel estado">Nenhuma categoria cadastrada.</div>
+      <div class="estado"><p role="alert">{{ falha() }}</p><button class="secundario" (click)="carregar()">Tentar de novo</button></div>
+    } @else if (!visiveis().length) {
+      <div class="estado">{{ busca().trim() ? 'Nenhuma categoria corresponde à busca.' : 'Nenhuma categoria cadastrada.' }}</div>
     } @else {
-      <div class="resumo" aria-live="polite">
-        {{ categorias().length }} {{ categorias().length === 1 ? 'categoria' : 'categorias' }}
-        <span aria-hidden="true">/</span> {{ vazias() }} sem produtos
+      <div class="tabela">
+        <table class="categorias-tabela" aria-label="Categorias cadastradas">
+          <thead><tr><th scope="col">Nome da Categoria</th><th scope="col">Descrição</th><th scope="col">Produtos Vinculados</th><th scope="col">Ações</th></tr></thead>
+          <tbody>
+            @for (item of itensPagina(); track item.id) {
+              <tr>
+                <th scope="row" data-campo="Categoria">
+                  <span class="categoria-celula">
+                    <span class="icone-tag" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11V5a2 2 0 0 1 2-2h6l10 10-8 8L3 11Z"/><circle cx="8" cy="8" r="1"/></svg></span>
+                    <span>{{ item.nome }}</span>
+                  </span>
+                </th>
+                <td data-campo="Descrição">{{ item.descricao || '—' }}</td>
+                <td data-campo="Produtos vinculados"><a class="vinculados" routerLink="/produtos" [queryParams]="{ categoria: item.id }">{{ total(item.id) }} <span>{{ total(item.id) === 1 ? 'produto' : 'produtos' }}</span></a></td>
+                <td data-campo="Ações">
+                  <div class="acoes-icones">
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Editar ' + item.nome" title="Editar" (click)="abrirForm(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 16 11-11a2 2 0 0 1 3 3L7 19l-4 1 1-4ZM13 7l4 4M4 22h16"/></svg></button>
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Ver detalhes de ' + item.nome" title="Ver detalhes" (click)="abrirDetalhes(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Excluir ' + item.nome" title="Excluir" (click)="abrirExclusao(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7M10 10v8M14 10v8"/></svg></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-      <ul class="grade">
-        @for (item of categorias(); track item.id) {
-          <li class="cartao" [attr.data-cor]="item.id % 4">
-            <div class="cartao-corpo">
-              <span class="selo" aria-hidden="true" [attr.data-cor]="item.id % 4">{{ iniciais(item.nome) }}</span>
-              <h2>{{ item.nome }}</h2>
-              @if (item.descricao) { <p>{{ item.descricao }}</p> }
-              <a class="link-contagem" routerLink="/produtos" [queryParams]="{ categoria: item.id }"
-                [attr.aria-label]="'Ver produtos de ' + item.nome">
-                {{ total(item.id) }} {{ total(item.id) === 1 ? 'produto' : 'produtos' }} <span aria-hidden="true">↗</span>
-              </a>
-            </div>
-            <div class="cartao-acoes">
-              <button type="button" class="acao" [attr.aria-label]="'Editar ' + item.nome" (click)="abrirForm(item)">Editar</button>
-              <button type="button" class="acao excluir" [attr.aria-label]="'Excluir ' + item.nome" (click)="abrirExclusao(item)">Excluir</button>
-            </div>
-          </li>
-        }
-      </ul>
+    }
+    @if (!carregando() && !falha()) {
+      <footer class="paginacao" aria-live="polite">
+        <span>Mostrando {{ primeiroItem() }}–{{ ultimoItem() }} de {{ visiveis().length }} itens</span>
+        <nav aria-label="Páginas de categorias">
+          <button type="button" [disabled]="paginaAtual() === 1" (click)="irParaPagina(paginaAtual() - 1)">Anterior</button>
+          @for (numero of paginasVisiveis(); track numero) {
+            <button type="button" [class.atual]="numero === paginaAtual()" [attr.aria-current]="numero === paginaAtual() ? 'page' : null" (click)="irParaPagina(numero)">{{ numero }}</button>
+          }
+          <button type="button" [disabled]="paginaAtual() === totalPaginas()" (click)="irParaPagina(paginaAtual() + 1)">Próximo</button>
+        </nav>
+      </footer>
     }
   </div>
 </section>
 
-<dialog #dialogo aria-labelledby="titulo-dialogo-categoria" (cancel)="cancelar($event)">
-  @if (removendo(); as categoria) {
-    <div class="dialogo-corpo">
+<dialog #dialogo class="catalogo-dialogo" aria-labelledby="titulo-dialogo-categoria" (cancel)="cancelar($event)">
+  @if (detalhando(); as categoria) {
+    <div class="modal-layout">
+      <header class="modal-cabecalho">
+        <div><h2 id="titulo-dialogo-categoria">Detalhes da categoria</h2><p>Informações cadastradas.</p></div>
+        <button type="button" class="modal-fechar" aria-label="Fechar detalhes da categoria" (click)="fechar()">×</button>
+      </header>
+      <dl class="detalhes-produto modal-conteudo">
+        <div><dt>Nome da categoria</dt><dd>{{ categoria.nome }}</dd></div>
+        <div><dt>Produtos vinculados</dt><dd>{{ total(categoria.id) }}</dd></div>
+        <div class="campo-largo"><dt>Descrição</dt><dd>{{ categoria.descricao || 'Não informada' }}</dd></div>
+      </dl>
+      <footer class="modal-rodape"><button type="button" class="secundario" (click)="fechar()">Fechar</button></footer>
+    </div>
+  } @else if (removendo(); as categoria) {
+    <div class="modal-layout">
       @if (total(categoria.id)) {
-        <h2 id="titulo-dialogo-categoria">Categoria em uso</h2>
-        <p>Há {{ total(categoria.id) }} {{ total(categoria.id) === 1 ? 'produto vinculado' : 'produtos vinculados' }} a
-          <strong>{{ categoria.nome }}</strong>. Mova os itens para outra categoria antes de excluir esta.</p>
-        <footer class="dialogo-acoes">
+        <header class="modal-cabecalho">
+          <div><h2 id="titulo-dialogo-categoria">Categoria em uso</h2><p>Esta categoria ainda possui produtos.</p></div>
+          <button type="button" class="modal-fechar" aria-label="Fechar aviso" (click)="fechar()">×</button>
+        </header>
+        <div class="modal-conteudo"><p>Há {{ total(categoria.id) }} {{ total(categoria.id) === 1 ? 'produto vinculado' : 'produtos vinculados' }} a
+          <strong>{{ categoria.nome }}</strong>. Mova os itens para outra categoria antes de excluir esta.</p></div>
+        <footer class="modal-rodape">
           <button type="button" class="secundario" (click)="fechar()" autofocus>Voltar</button>
-          <a class="primario" routerLink="/produtos" [queryParams]="{ categoria: categoria.id }">Ver produtos</a>
+          <a class="primario" routerLink="/produtos" [queryParams]="{ categoria: categoria.id }" (click)="fechar()">Ver produtos</a>
         </footer>
       } @else {
-        <h2 id="titulo-dialogo-categoria">Excluir categoria?</h2>
-        <p>A categoria <strong>{{ categoria.nome }}</strong> será removida do catálogo.</p>
-        @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
-        <footer class="dialogo-acoes">
+        <header class="modal-cabecalho">
+          <div><h2 id="titulo-dialogo-categoria">Excluir categoria?</h2><p>Confirme a remoção do catálogo.</p></div>
+          <button type="button" class="modal-fechar" aria-label="Fechar exclusão da categoria" [disabled]="ocupado()" (click)="fechar()">×</button>
+        </header>
+        <div class="modal-conteudo"><p>A categoria <strong>{{ categoria.nome }}</strong> será removida do catálogo.</p></div>
+        @if (erroDialogo()) { <p class="erro modal-erro" role="alert">{{ erroDialogo() }}</p> }
+        <footer class="modal-rodape">
           <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()" autofocus>Cancelar</button>
           <button type="button" class="perigo" [disabled]="ocupado()" (click)="excluir(categoria)">{{ ocupado() ? 'Excluindo…' : 'Excluir categoria' }}</button>
         </footer>
       }
     </div>
   } @else {
-    <form class="dialogo-corpo" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
-      <h2 id="titulo-dialogo-categoria">{{ editando() ? 'Editar categoria' : 'Nova categoria' }}</h2>
-      <fieldset [disabled]="ocupado()">
-        <label>Nome
-          <input formControlName="nome" autocomplete="off" maxlength="60" required autofocus
+    <form class="modal-layout" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <header class="modal-cabecalho">
+        <div><h2 id="titulo-dialogo-categoria">{{ editando() ? 'Editar categoria' : 'Nova categoria' }}</h2><p>Preencha as informações abaixo.</p></div>
+        <button type="button" class="modal-fechar" aria-label="Fechar formulário de categoria" [disabled]="ocupado()" (click)="fechar()">×</button>
+      </header>
+      <fieldset class="modal-conteudo modal-campos categoria-campos" [disabled]="ocupado()">
+        <label class="campo-largo">Nome da categoria
+          <input formControlName="nome" autocomplete="off" placeholder="Ex.: Congelados" maxlength="60" required autofocus
             [attr.aria-invalid]="form.controls.nome.touched && form.controls.nome.invalid" aria-describedby="erro-categoria-nome">
           @if (form.controls.nome.touched && form.controls.nome.invalid) { <small class="erro" id="erro-categoria-nome">Informe um nome de até 60 caracteres.</small> }
         </label>
-        <label>Descrição (opcional)
-          <textarea rows="3" formControlName="descricao" maxlength="200"
+        <label class="campo-largo">Descrição
+          <textarea rows="3" formControlName="descricao" placeholder="Descreva os produtos desta categoria" maxlength="200"
             [attr.aria-invalid]="form.controls.descricao.touched && form.controls.descricao.invalid" aria-describedby="erro-categoria-descricao"></textarea>
           @if (form.controls.descricao.touched && form.controls.descricao.invalid) { <small class="erro" id="erro-categoria-descricao">Use até 200 caracteres.</small> }
         </label>
       </fieldset>
-      @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
-      <footer class="dialogo-acoes">
+      @if (erroDialogo()) { <p class="erro modal-erro" role="alert">{{ erroDialogo() }}</p> }
+      <footer class="modal-rodape">
         <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()">Cancelar</button>
         <button type="submit" class="primario" [disabled]="ocupado()">{{ ocupado() ? 'Salvando…' : 'Salvar categoria' }}</button>
       </footer>

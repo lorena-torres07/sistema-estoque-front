@@ -1,0 +1,63 @@
+<section class="vitrine" aria-labelledby="titulo-catalogo">
+  <header class="vitrine-intro">
+    <div>
+      <h1 id="titulo-catalogo">Catálogo de Produtos</h1>
+      <p>Consulte preços, categorias e disponibilidade de forma rápida.</p>
+    </div>
+    @if (!carregando() && !erro()) {
+      <span class="vitrine-contagem"><strong>{{ encontrados().length }}</strong> {{ encontrados().length === 1 ? 'produto encontrado' : 'produtos encontrados' }}</span>
+    }
+  </header>
+
+  <div class="vitrine-filtros">
+    <label class="vitrine-busca">
+      <span class="sr-only">Buscar produto por nome ou código</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+      <input type="search" placeholder="Buscar por nome ou código..." [value]="busca()" (input)="busca.set(campo.value)" #campo>
+    </label>
+    <div class="vitrine-categorias" role="group" aria-label="Filtrar por categoria">
+      <button type="button" [class.selecionada]="categoriaId() === null" [attr.aria-pressed]="categoriaId() === null" (click)="categoriaId.set(null)">Todas</button>
+      @for (categoria of categorias(); track categoria.id) {
+        <button type="button" [class.selecionada]="categoriaId() === categoria.id" [attr.aria-pressed]="categoriaId() === categoria.id" (click)="categoriaId.set(categoria.id)">{{ categoria.nome }}</button>
+      }
+    </div>
+  </div>
+
+  @if (carregando()) {
+    <p class="vitrine-estado" role="status">Carregando catálogo…</p>
+  } @else if (erro()) {
+    <div class="vitrine-estado" role="alert"><p>{{ erro() }}</p><button type="button" (click)="carregar()">Tentar novamente</button></div>
+  } @else if (!encontrados().length) {
+    <p class="vitrine-estado">{{ busca().trim() || categoriaId() !== null ? 'Nenhum produto corresponde aos filtros.' : 'Nenhum produto cadastrado.' }}</p>
+  } @else {
+    <div class="vitrine-grade">
+      @for (produto of encontrados(); track produto.id) {
+        <article class="vitrine-card" [attr.data-tom]="produto.categoriaId % 6">
+          <div class="vitrine-ilustracao" aria-hidden="true">
+            <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="48" cy="81" rx="31" ry="5" fill="currentColor" opacity=".09"/>
+              <path d="M29 39h38l-4 38H33l-4-38Z" fill="#fff" stroke="currentColor" stroke-width="2.3"/>
+              <path d="M29 39h38l-3 6H32l-3-6Z" fill="currentColor" opacity=".12"/>
+              <path d="M36 39c1-10 5-15 12-15s11 5 12 15" stroke="currentColor" stroke-width="2.3"/>
+              <path d="M37 32h22" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+              <circle cx="48" cy="56" r="8" fill="currentColor" opacity=".72"/>
+            </svg>
+          </div>
+          <div class="vitrine-card-corpo">
+            <div class="vitrine-meta">
+              <span class="vitrine-categoria">{{ categoriasPorId().get(produto.categoriaId) ?? 'Sem categoria' }}</span>
+              <small [title]="codigo(produto)">{{ codigo(produto) }}</small>
+            </div>
+            <h2>{{ produto.nome }}</h2>
+            <div class="vitrine-card-rodape">
+              <div><small>Preço unitário</small><strong>{{ moeda.format(produto.preco) }}</strong></div>
+              <span class="vitrine-saldo" [class.baixo]="produto.quantidadeEmEstoque > 0 && produto.quantidadeEmEstoque <= produto.estoqueMinimo" [class.zerado]="produto.quantidadeEmEstoque === 0">
+                {{ produto.quantidadeEmEstoque }} {{ produto.quantidadeEmEstoque === 1 ? 'unidade' : 'unidades' }} em estoque
+              </span>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

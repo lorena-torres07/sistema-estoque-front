@@ -1,11 +1,13 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DashboardApi, MovimentacaoResumo, ProdutoEstoque } from '../../services/dashboard-api';
 import { mensagemErro } from '../shared/catalogo-ui';
 
 @Component({
   selector: 'app-dashboard',
+  imports: [RouterLink],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.css',
 })

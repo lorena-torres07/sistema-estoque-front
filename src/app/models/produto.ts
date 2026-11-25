@@ -5,6 +5,8 @@ export interface ProdutoDados {
   preco: number;
   categoriaId: number;
   estoqueMinimo: number;
+  quantidadeInicial?: number;
+  quantidadeEmEstoque?: number;
   codigoBarras?: string | null;
 }
 
