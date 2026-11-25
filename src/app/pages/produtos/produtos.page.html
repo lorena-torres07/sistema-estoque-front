@@ -1,0 +1,129 @@
+<section class="catalogo" aria-labelledby="titulo-produtos">
+  <header class="cabecalho">
+    <div>
+      <h1 id="titulo-produtos">Produtos<span>.</span></h1>
+      <p>Encontre e gerencie os itens do supermercado.</p>
+    </div>
+    <button class="primario" type="button" [disabled]="carregando() || !!falha() || !categorias().length"
+      (click)="abrirForm()"><span aria-hidden="true" class="mais">+</span> Novo produto</button>
+  </header>
+
+  @if (aviso()) {
+    <p class="aviso" role="status">{{ aviso() }}</p>
+  }
+  @if (!carregando() && !falha() && !categorias().length) {
+    <p class="aviso">Cadastre uma <a routerLink="/categorias">categoria</a> para adicionar produtos.</p>
+  }
+
+  <div class="painel" [attr.aria-busy]="carregando()">
+    <div class="filtros">
+      <label class="busca">
+        <span>Buscar por nome</span>
+        <span class="campo-busca">
+          <input type="search" placeholder="Ex.: café" [value]="busca()" (input)="busca.set(buscaInput.value)" #buscaInput>
+        </span>
+      </label>
+      <label>
+        <span>Categoria</span>
+        <select [value]="categoriaSelecionada() ?? ''" (change)="filtrarCategoria(filtro.value)" #filtro>
+          <option value="">Todas as categorias</option>
+          @for (item of categorias(); track item.id) {
+            <option [value]="item.id" [selected]="item.id === categoriaSelecionada()">{{ item.nome }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    @if (carregando()) {
+      <div class="estado" role="status">Carregando produtos…</div>
+    } @else if (falha()) {
+      <div class="estado"><p role="alert">{{ falha() }}</p><button class="secundario" (click)="carregar()">Tentar de novo</button></div>
+    } @else if (!visiveis().length) {
+      <div class="estado">
+        @if (busca().trim() || categoriaSelecionada() !== null) {
+          <p>Nenhum produto corresponde aos filtros.</p>
+          <button class="secundario" (click)="busca.set(''); filtrarCategoria('')">Limpar filtros</button>
+        } @else {
+          <p>Nenhum produto cadastrado.</p>
+        }
+      </div>
+    } @else {
+      <div class="tabela">
+        <table aria-label="Produtos cadastrados">
+          <thead><tr><th scope="col">Produto</th><th scope="col">Categoria</th><th scope="col" class="preco">Preço</th><th scope="col" class="acoes">Ações</th></tr></thead>
+          <tbody>
+            @for (item of visiveis(); track item.id) {
+              <tr>
+                <th scope="row">
+                  <div class="item">
+                    <span class="selo" aria-hidden="true" [attr.data-cor]="item.categoriaId % 4">{{ iniciais(item.nome) }}</span>
+                    <span class="nome">{{ item.nome }}@if (item.codigoBarras) { <small>{{ item.codigoBarras }}</small> }</span>
+                  </div>
+                </th>
+                <td data-campo="Categoria"><span class="etiqueta">{{ categoriasPorId().get(item.categoriaId) ?? 'Categoria indisponível' }}</span></td>
+                <td class="preco" data-campo="Preço">{{ moeda.format(item.preco) }}</td>
+                <td class="acoes">
+                  <button type="button" class="acao" [attr.aria-label]="'Editar ' + item.nome" (click)="abrirForm(item)">Editar</button>
+                  <button type="button" class="acao excluir" [attr.aria-label]="'Excluir ' + item.nome" (click)="abrirExclusao(item)">Excluir</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (!carregando() && !falha()) {
+      <footer class="rodape" aria-live="polite">{{ visiveis().length }} de {{ produtos().length }} {{ produtos().length === 1 ? 'produto' : 'produtos' }}</footer>
+    }
+  </div>
+</section>
+
+<dialog #dialogo aria-labelledby="titulo-dialogo-produto" (cancel)="cancelar($event)">
+  @if (removendo(); as produto) {
+    <div class="dialogo-corpo">
+      <h2 id="titulo-dialogo-produto">Excluir produto?</h2>
+      <p>O item <strong>{{ produto.nome }}</strong> será removido do catálogo.</p>
+      @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
+      <footer class="dialogo-acoes">
+        <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()" autofocus>Cancelar</button>
+        <button type="button" class="perigo" [disabled]="ocupado()" (click)="excluir(produto)">{{ ocupado() ? 'Excluindo…' : 'Excluir produto' }}</button>
+      </footer>
+    </div>
+  } @else {
+    <form class="dialogo-corpo" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <h2 id="titulo-dialogo-produto">{{ editando() ? 'Editar produto' : 'Novo produto' }}</h2>
+      <p>Preencha nome, categoria e preço.</p>
+      <fieldset [disabled]="ocupado()">
+        <label>Nome
+          <input formControlName="nome" autocomplete="off" maxlength="100" required autofocus
+            [attr.aria-invalid]="form.controls.nome.touched && form.controls.nome.invalid" aria-describedby="erro-produto-nome">
+          @if (form.controls.nome.touched && form.controls.nome.invalid) { <small class="erro" id="erro-produto-nome">Informe um nome de até 100 caracteres.</small> }
+        </label>
+        <div class="dupla">
+          <label>Categoria
+            <select formControlName="categoriaId" required
+              [attr.aria-invalid]="form.controls.categoriaId.touched && form.controls.categoriaId.invalid" aria-describedby="erro-produto-categoria">
+              <option [ngValue]="null">Selecione</option>
+              @for (item of categorias(); track item.id) { <option [ngValue]="item.id">{{ item.nome }}</option> }
+            </select>
+            @if (form.controls.categoriaId.touched && form.controls.categoriaId.invalid) { <small class="erro" id="erro-produto-categoria">Selecione uma categoria.</small> }
+          </label>
+          <label>Preço (R$)
+            <input formControlName="preco" inputmode="decimal" placeholder="0,00" maxlength="16" required
+              [attr.aria-invalid]="form.controls.preco.touched && form.controls.preco.invalid" aria-describedby="erro-produto-preco">
+            @if (form.controls.preco.touched && form.controls.preco.invalid) { <small class="erro" id="erro-produto-preco">Informe um valor a partir de zero, com até 2 casas decimais.</small> }
+          </label>
+        </div>
+        <label>Código de barras (opcional)
+          <input formControlName="codigoBarras" autocomplete="off" inputmode="numeric" maxlength="14"
+            [attr.aria-invalid]="form.controls.codigoBarras.touched && form.controls.codigoBarras.invalid" aria-describedby="erro-produto-codigo">
+          @if (form.controls.codigoBarras.touched && form.controls.codigoBarras.invalid) { <small class="erro" id="erro-produto-codigo">Use de 8 a 14 dígitos.</small> }
+        </label>
+      </fieldset>
+      @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
+      <footer class="dialogo-acoes">
+        <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()">Cancelar</button>
+        <button type="submit" class="primario" [disabled]="ocupado()">{{ ocupado() ? 'Salvando…' : 'Salvar produto' }}</button>
+      </footer>
+    </form>
+  }
+</dialog>
