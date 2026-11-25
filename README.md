@@ -73,3 +73,5 @@ O frontend usa a base relativa `/api`:
 | Dashboard | `GET /api/produtos/estoque-baixo`, `GET /api/movimentacoes` e `GET /api/produtos` |
 
 O cadastro de produto envia `quantidadeInicial` para registrar uma entrada no histórico. A edição envia `quantidadeEmEstoque` como saldo final desejado; a API deve registrar a diferença como entrada ou saída. A exclusão arquiva o produto para preservar suas movimentações e tirá-lo do catálogo e dos indicadores. Essas regras, os exemplos de JSON, os responsáveis no backend e os pontos de atenção no banco estão detalhados em [Integração com o backend local](docs/Integracao-backend-local.md).
+
+
