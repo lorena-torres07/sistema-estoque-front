@@ -1,0 +1,73 @@
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/dm-serif-text/latin-400.css';
+
+:root {
+  color-scheme: light;
+  font-family: 'DM Sans', sans-serif;
+  color: #202944;
+  background: #f3efe5;
+  font-synthesis: none;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+button, input, select, textarea { font: inherit; }
+a { color: #25479b; }
+:focus-visible { outline: 3px solid #3559b5; outline-offset: 3px; }
+
+.moldura {
+  width: min(1100px, calc(100% - 72px));
+  margin-inline: auto;
+}
+
+.pular { position: fixed; inset: 10px auto auto 10px; z-index: 2; padding: 10px; background: white; }
+.pular:not(:focus) { transform: translateY(-160%); }
+.faixa { background: #2449a3; color: #fffdf6; }
+.topo { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  font-size: 1.15rem;
+  text-decoration: none;
+}
+.marca:focus-visible { outline-color: #f6dc8d; }
+.gondola {
+  width: 28px;
+  height: 23px;
+  border-bottom: 2px solid #f8dc89;
+  display: grid;
+  grid-template-columns: 6px 9px 6px;
+  gap: 2px;
+  align-items: end;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+.gondola i { background: #f8dc89; height: 13px; border-radius: 1px 1px 0 0; }
+.gondola i:nth-child(2) { height: 17px; }
+.gondola i:nth-child(3) { height: 9px; }
+.abas { display: flex; gap: 25px; border-bottom: 1px solid #d7d0c2; }
+.abas a {
+  padding: 15px 4px 12px;
+  text-decoration: none;
+  color: #51586b;
+  font-size: .92rem;
+  font-weight: 700;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+.abas a.ativa { color: #2449a3; border-color: #2449a3; }
+.abas a:hover { color: #2449a3; }
+main { padding-bottom: 48px; }
+
+@media (max-width: 620px) {
+  .moldura { width: calc(100% - 32px); }
+  .topo { min-height: 62px; }
+  .marca { font-size: 1rem; gap: 8px; }
+}
