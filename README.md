@@ -1,46 +1,75 @@
-# sistema-estoque-front
+# EstoqueUp — Gestão de Estoque
 
-Projeto da residencia
+Front-end Angular do projeto de residência para gestão de estoque de supermercado. O sistema consulta produtos e categorias, mostra indicadores no Dashboard e oferece telas de cadastro e edição. A API é feita em Java/Spring Boot com PostgreSQL e pertence a um repositório separado da equipe.
 
-# Gestão de Estoque — Parte 2
+## Documentação
 
-Front-end da Pessoa 2 do projeto de gestão de estoque. As telas Angular de **Produtos** e **Categorias** permitem listar, cadastrar, editar e excluir registros. A busca por nome aceita termos sem acento. A contagem em cada categoria abre a lista de produtos já filtrada.
+- [Plano de tarefas do front-end](docs/Plano-tarefas-Frontend.md): responsabilidades das Pessoas 1, 2 e 3, validações e pendências.
+- [Style guide](docs/style-guide.md): tipografia, cores, componentes e espaçamento da interface.
+- [Integração com o backend local](docs/Integracao-backend-local.md): mudanças locais a transportar para o repositório das Pessoas 4, 5 e 6, com motivos e contrato esperado pelo Angular.
 
-## Executar o projeto
+## Situação do projeto
 
-Use Node.js 20.19+ na série 20, 22.12+ na série 22 ou 24.x. Inicie o Spring Boot com o PostgreSQL da equipe. No terminal, entre na pasta deste projeto e use:
+- **Pessoa 1:** estrutura, navegação, Dashboard, catálogo de consulta e complementos de interface implementados. Os fluxos e ajustes recentes foram validados; a revisão visual ampla do Dashboard continua registrada no [plano do front-end](docs/Plano-tarefas-Frontend.md).
+- **Pessoa 2:** telas de produtos e categorias integradas e validadas. A base original dessas telas foi desenvolvida por Lorena Torres; os commits originais permanecem no histórico do Git.
+- **Pessoa 3:** tela completa de movimentações, formulários de entrada/saída e histórico ainda pendentes. O Dashboard já mostra as últimas movimentações em modo de consulta.
+- **Pessoas 4, 5 e 6:** alguns ajustes necessários à integração existem somente em um backend local separado. O [repasse técnico do backend](docs/Integracao-backend-local.md) descreve o que precisa ser revisado e incorporado pela equipe.
+
+## Tecnologias e estrutura
+
+| Camada | Tecnologia | Onde está |
+| --- | --- | --- |
+| Interface | Angular 21 e TypeScript | `src/` neste repositório |
+| API | Java 21 e Spring Boot | Repositório da equipe de backend |
+| Banco de dados | PostgreSQL | Configurado pela equipe de backend |
+
+O Angular está na raiz deste repositório. `src/app/pages/` contém as páginas; `src/app/layout/` contém sidebar e header; `src/app/services/` concentra as chamadas HTTP; `src/app/app.routes.ts` define as rotas. A pasta local `sistema-estoque-backend/`, quando existir, é **ignorada pelo Git deste frontend** e não entra no commit ou merge daqui.
+
+## Executar no desenvolvimento
+
+1. Instale uma versão de Node.js compatível com Angular 21 e as dependências do projeto:
+
+   ```sh
+   npm ci
+   ```
+
+2. Inicie a API Spring Boot da equipe com PostgreSQL, ouvindo em `http://127.0.0.1:8080`. A configuração do banco e o comando de execução ficam no repositório do backend. Para reproduzir os fluxos de saldo inicial, edição de saldo e arquivamento, a API precisa incorporar as regras do [repasse técnico](docs/Integracao-backend-local.md).
+
+3. Inicie o Angular:
+
+   ```sh
+   npm start
+   ```
+
+4. Abra `http://localhost:4200/`. O [proxy de desenvolvimento](proxy.conf.json) encaminha chamadas `/api/**` para `http://127.0.0.1:8080`. Se a API estiver desligada, as páginas mostram estados de erro e não conseguirão carregar ou salvar dados.
+
+Para gerar e verificar o pacote de produção do frontend:
 
 ```sh
-npm ci
-npm start
+npm run build
 ```
 
-Abra `http://localhost:4200/`. O arquivo `proxy.conf.json` encaminha as chamadas em `/api` para `http://127.0.0.1:8080`. Edite o destino se a API da equipe estiver em outra porta. O comando `npm run build` gera os arquivos em `dist/catalogo/browser`. Em produção, sirva o front-end e os endpoints `/api` na mesma origem, com fallback para `index.html` nas rotas Angular.
+O resultado fica em `dist/catalogo/`. Ao hospedar o Angular, configure fallback para `index.html` nas rotas da aplicação e encaminhe `/api` à API da equipe. O `proxy.conf.json` é usado pelo servidor de desenvolvimento, não substitui essa configuração de hospedagem.
 
-| Recurso | Listar e cadastrar | Editar e excluir |
-| --- | --- | --- |
-| Produtos | `GET` e `POST /api/produtos` | `PUT` e `DELETE /api/produtos/{id}` |
-| Categorias | `GET` e `POST /api/categorias` | `PUT` e `DELETE /api/categorias/{id}` |
+## Páginas e navegação
 
-Os endpoints vêm do planejamento da equipe. Os DTOs abaixo são as suposições desta entrega e precisam ser conferidos com as Pessoas 4 e 5:
+| Rota | Finalidade |
+| --- | --- |
+| `/dashboard` | Total de produtos, unidades em estoque, alertas e últimas movimentações. “Ver itens em atenção” abre a gestão de produtos filtrada por estoque baixo. |
+| `/catalogo` | Consulta de produtos com busca por nome ou código, filtro por categoria e exibição de preço e disponibilidade. Não possui ações de cadastro. |
+| `/produtos` | Gestão de produtos: busca, filtro, paginação, cadastro, edição, detalhes e exclusão. No celular, a listagem aparece em cards. |
+| `/categorias` | Gestão de categorias: busca, paginação, cadastro, edição, detalhes e exclusão. |
 
-- Produto enviado: `{ "nome": "Café moído", "preco": 26.90, "categoriaId": 1, "codigoBarras": null }`. O código de barras é opcional. Quando preenchido, o formulário aceita de 8 a 14 dígitos.
-- Categoria enviada: `{ "nome": "Mercearia", "descricao": "Grãos e farinhas" }`. A descrição é opcional e segue como uma string vazia se omitida.
-- As listagens esperam arrays JSON com IDs numéricos. A listagem de produtos aceita tanto `categoriaId` quanto `categoria: { id }`. As operações de gravação aceitam respostas com ou sem corpo.
-- A tela de categorias pede a transferência dos vínculos antes de excluir uma categoria em uso. Cabe também ao Spring Boot proteger a relação contra exclusões concorrentes.
+No menu, **Catálogo** abre a vitrine de consulta. **Estoque → Produtos/Categorias** abre as telas de gestão. Em telas pequenas, a sidebar abre sobre o conteúdo e pode ser fechada pela seta, pelo fundo escurecido ou pela navegação.
 
-`src/app/services/catalogo-api.ts` concentra as chamadas e o mapeamento dos produtos. Caso o contrato da equipe use campos diferentes ou paginação, ajuste o serviço e os modelos em `src/app/models`.
+## Contrato com a API
 
-## Integrar no projeto da equipe
+O frontend usa a base relativa `/api`:
 
-1. Copie `src/app/pages/produtos`, `src/app/pages/categorias`, `src/app/pages/shared`, `src/app/models` e `src/app/services` para os diretórios correspondentes.
-2. Acrescente as duas entradas de `catalogoRoutes`, em `src/app/app.routes.ts`, à lista de rotas existente. Aponte os links do menu da equipe para `/produtos` e `/categorias`.
-3. Confira se `provideHttpClient()` já está nos providers do app. Para trocar a URL base de `/api`, forneça `{ provide: CATALOGO_API_URL, useValue: 'http://localhost:8080/api' }` e configure CORS no Spring se as origens diferirem.
-4. Para usar a mesma tipografia, instale `@fontsource/dm-sans` e `@fontsource/dm-serif-text` e copie os imports de fonte de `src/styles.css`. As folhas das telas já incluem fontes de sistema de reserva.
+| Recurso | Endpoints utilizados |
+| --- | --- |
+| Produtos | `GET /api/produtos`, `POST /api/produtos`, `PUT /api/produtos/{id}`, `DELETE /api/produtos/{id}` |
+| Categorias | `GET /api/categorias`, `POST /api/categorias`, `PUT /api/categorias/{id}`, `DELETE /api/categorias/{id}` |
+| Dashboard | `GET /api/produtos/estoque-baixo`, `GET /api/movimentacoes` e `GET /api/produtos` |
 
-## Publicar na Vercel
-
-Ao importar este repositório, use a raiz do repositório como Root Directory (`.`). O arquivo `vercel.json` configura a compilação Angular, a pasta publicada e o acesso direto às rotas de Produtos e Categorias.
-
-Para os cadastros funcionarem na URL publicada, hospede a API Spring Boot e encaminhe `/api/:path*` para os endpoints HTTPS correspondentes com uma regra de rewrite na Vercel. O proxy local de `proxy.conf.json` é usado pelo servidor de desenvolvimento. A URL publicada depende dessa configuração da API para consultar e gravar os registros.
-
+O cadastro de produto envia `quantidadeInicial` para registrar uma entrada no histórico. A edição envia `quantidadeEmEstoque` como saldo final desejado; a API deve registrar a diferença como entrada ou saída. A exclusão arquiva o produto para preservar suas movimentações e tirá-lo do catálogo e dos indicadores. Essas regras, os exemplos de JSON, os responsáveis no backend e os pontos de atenção no banco estão detalhados em [Integração com o backend local](docs/Integracao-backend-local.md).

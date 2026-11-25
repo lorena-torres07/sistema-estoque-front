@@ -5,7 +5,8 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { Categoria } from '../../models/categoria';
 import { CatalogoApi } from '../../services/catalogo-api';
-import { compararNomes, iniciais, mensagemErro } from '../shared/catalogo-ui';
+import { NotificacaoService } from '../../services/notificacao.service';
+import { compararNomes, mensagemErro, normalizarNome } from '../shared/catalogo-ui';
 
 @Component({
   selector: 'app-categorias',
@@ -15,21 +16,41 @@ import { compararNomes, iniciais, mensagemErro } from '../shared/catalogo-ui';
 })
 export class CategoriasPage {
   private readonly api = inject(CatalogoApi);
+  private readonly notificacao = inject(NotificacaoService);
   private readonly detector = inject(ChangeDetectorRef);
   private readonly dialogo = viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly categorias = signal<Categoria[]>([]);
   protected readonly produtosPorCategoria = signal(new Map<number, number>());
+  protected readonly totalProdutos = signal(0);
+  protected readonly busca = signal('');
+  protected readonly pagina = signal(1);
+  protected readonly tamanhoPagina = 5;
   protected readonly carregando = signal(true);
   protected readonly falha = signal('');
-  protected readonly aviso = signal('');
   protected readonly erroDialogo = signal('');
   protected readonly ocupado = signal(false);
   protected readonly editando = signal<Categoria | null>(null);
   protected readonly removendo = signal<Categoria | null>(null);
-  protected readonly iniciais = iniciais;
-  protected readonly vazias = computed(() => this.categorias().filter(item => !this.total(item.id)).length);
+  protected readonly detalhando = signal<Categoria | null>(null);
+  protected readonly visiveis = computed(() => this.categorias().filter(item =>
+    normalizarNome(item.nome).includes(normalizarNome(this.busca())),
+  ));
+  protected readonly totalPaginas = computed(() => Math.max(1, Math.ceil(this.visiveis().length / this.tamanhoPagina)));
+  protected readonly paginaAtual = computed(() => Math.min(this.pagina(), this.totalPaginas()));
+  protected readonly paginasVisiveis = computed(() => {
+    const atual = this.paginaAtual();
+    const total = this.totalPaginas();
+    const inicio = Math.max(1, Math.min(atual - 1, total - 2));
+    return Array.from({ length: Math.min(3, total - inicio + 1) }, (_, indice) => inicio + indice);
+  });
+  protected readonly itensPagina = computed(() => this.visiveis().slice(
+    (this.paginaAtual() - 1) * this.tamanhoPagina,
+    this.paginaAtual() * this.tamanhoPagina,
+  ));
+  protected readonly primeiroItem = computed(() => this.visiveis().length ? (this.paginaAtual() - 1) * this.tamanhoPagina + 1 : 0);
+  protected readonly ultimoItem = computed(() => Math.min(this.paginaAtual() * this.tamanhoPagina, this.visiveis().length));
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.pattern(/\S/), Validators.maxLength(60)]],
@@ -52,6 +73,7 @@ export class CategoriasPage {
             totais.set(item.categoriaId, (totais.get(item.categoriaId) ?? 0) + 1);
           }
           this.produtosPorCategoria.set(totais);
+          this.totalProdutos.set(produtos.length);
           this.categorias.set(categorias.toSorted((a, b) => compararNomes(a.nome, b.nome)));
           this.carregando.set(false);
         },
@@ -66,8 +88,18 @@ export class CategoriasPage {
     return this.produtosPorCategoria().get(id) ?? 0;
   }
 
+  protected buscar(valor: string) {
+    this.busca.set(valor);
+    this.pagina.set(1);
+  }
+
+  protected irParaPagina(numero: number) {
+    this.pagina.set(Math.max(1, Math.min(numero, this.totalPaginas())));
+  }
+
   protected abrirForm(categoria: Categoria | null = null) {
     this.removendo.set(null);
+    this.detalhando.set(null);
     this.editando.set(categoria);
     this.erroDialogo.set('');
     this.form.reset({ nome: categoria?.nome ?? '', descricao: categoria?.descricao ?? '' });
@@ -76,7 +108,14 @@ export class CategoriasPage {
 
   protected abrirExclusao(categoria: Categoria) {
     this.erroDialogo.set('');
+    this.detalhando.set(null);
     this.removendo.set(categoria);
+    this.mostrarDialogo();
+  }
+
+  protected abrirDetalhes(categoria: Categoria) {
+    this.removendo.set(null);
+    this.detalhando.set(categoria);
     this.mostrarDialogo();
   }
 
@@ -127,7 +166,7 @@ export class CategoriasPage {
   private finalizar(aviso: string) {
     this.ocupado.set(false);
     this.fechar();
-    this.aviso.set(aviso);
+    this.notificacao.mostrar(aviso);
     this.carregar();
   }
 }

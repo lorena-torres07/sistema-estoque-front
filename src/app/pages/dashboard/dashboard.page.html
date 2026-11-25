@@ -1,0 +1,100 @@
+<section class="dashboard" aria-labelledby="titulo-dashboard">
+  <div class="dashboard-intro">
+    <div>
+      <p class="eyebrow">VISÃO GERAL</p>
+      <h1 id="titulo-dashboard">Seu estoque em um só lugar<span>.</span></h1>
+      <p>Acompanhe os principais indicadores e os itens que precisam de atenção.</p>
+    </div>
+    <span class="intro-date">Dados atuais da API</span>
+  </div>
+
+  @if (carregando()) {
+    <div class="dashboard-state" role="status" aria-live="polite">Carregando indicadores do estoque…</div>
+  } @else if (erro()) {
+    <div class="dashboard-state" role="alert">
+      <p>{{ erro() }}</p>
+      <button type="button" (click)="carregar()">Tentar novamente</button>
+    </div>
+  } @else {
+    <div class="metrics" aria-label="Indicadores do estoque">
+      <article class="metric-card">
+        <span class="metric-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="M3 7v10l9 5 9-5V7M12 12v10"/></svg>
+        </span>
+        <p>Total de produtos cadastrados</p>
+        <strong>{{ numero(totalProdutos()) }}</strong>
+        <small>{{ totalProdutos() === 1 ? 'produto no catálogo' : 'produtos no catálogo' }}</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V11M9 19V5M14 19v-8M19 19v-5M2 19h20"/></svg>
+        </span>
+        <p>Quantidade total em estoque</p>
+        <strong>{{ numero(unidadesEmEstoque()) }}</strong>
+        <small>unidades disponíveis</small>
+      </article>
+      <article class="metric-card metric-warning">
+        <span class="metric-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9ZM10 21h4"/></svg>
+        </span>
+        <p>Produtos com estoque baixo</p>
+        <strong>{{ numero(estoqueBaixo().length) }}</strong>
+        <small>{{ estoqueBaixo().length === 1 ? 'item em atenção' : 'itens em atenção' }}</small>
+        @if (estoqueBaixo().length) { <a routerLink="/produtos" [queryParams]="{ estoque: 'baixo' }">Ver itens em atenção <span aria-hidden="true">→</span></a> }
+      </article>
+    </div>
+
+    <section class="dashboard-panel" id="alertas" aria-labelledby="titulo-alertas">
+      <div class="panel-heading">
+        <div><h2 id="titulo-alertas">Alertas de estoque baixo</h2><p>Produtos com quantidade igual ou inferior ao mínimo definido.</p></div>
+        @if (estoqueBaixo().length > 5) {
+          <button type="button" class="panel-action" (click)="alertasExpandidos.set(!alertasExpandidos())">
+            {{ alertasExpandidos() ? 'Mostrar menos' : 'Ver todos' }}
+          </button>
+        }
+      </div>
+      @if (!estoqueBaixo().length) {
+        <p class="panel-empty">Nenhum produto com estoque baixo no momento.</p>
+      } @else {
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table">
+            <thead><tr><th scope="col">Produto</th><th scope="col">Categoria</th><th scope="col">Qtd. atual</th><th scope="col">Estoque mínimo</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+              @for (item of alertasVisiveis(); track item.id) {
+                <tr>
+                  <th scope="row"><span class="product-name">{{ item.nome }}</span>@if (item.codigoBarras) { <small>{{ item.codigoBarras }}</small> }</th>
+                  <td>{{ item.categoriaNome }}</td>
+                  <td class="stock-value" [class.stock-empty]="item.quantidadeEmEstoque === 0">{{ numero(item.quantidadeEmEstoque) }} un.</td>
+                  <td>{{ numero(item.estoqueMinimo) }} un.</td>
+                  <td><span class="status-pill" [class.status-empty]="item.quantidadeEmEstoque === 0">{{ item.quantidadeEmEstoque === 0 ? 'Sem estoque' : 'Estoque baixo' }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  <section class="dashboard-panel" aria-labelledby="titulo-movimentacoes">
+    <div class="panel-heading"><div><h2 id="titulo-movimentacoes">Últimas movimentações</h2><p>Entradas e saídas registradas recentemente.</p></div></div>
+    @if (carregandoMovimentacoes()) {
+      <p class="panel-empty" role="status">Carregando movimentações…</p>
+    } @else if (erroMovimentacoes()) {
+      <div class="panel-empty" role="alert"><p>{{ erroMovimentacoes() }}</p><button type="button" class="panel-action" (click)="carregarMovimentacoes()">Tentar novamente</button></div>
+    } @else if (!movimentosRecentes().length) {
+      <p class="panel-empty">Nenhuma movimentação registrada.</p>
+    } @else {
+      <div class="dashboard-table-wrap">
+        <table class="dashboard-table">
+          <thead><tr><th scope="col">Produto</th><th scope="col">Tipo</th><th scope="col">Quantidade</th><th scope="col">Data e hora</th></tr></thead>
+          <tbody>
+            @for (item of movimentosRecentes(); track item.id) {
+              <tr><th scope="row"><span class="product-name">{{ item.produtoNome }}</span></th><td><span class="movement-pill" [class.outgoing]="item.tipo === 'SAIDA'">{{ item.tipo === 'ENTRADA' ? '↑ Entrada' : '↓ Saída' }}</span></td><td class="movement-quantity">{{ item.tipo === 'ENTRADA' ? '+' : '−' }}{{ numero(item.quantidade) }} un.</td><td>{{ data(item.dataMovimentacao) }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>

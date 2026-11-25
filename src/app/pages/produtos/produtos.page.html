@@ -1,37 +1,43 @@
 <section class="catalogo" aria-labelledby="titulo-produtos">
-  <header class="cabecalho">
-    <div>
-      <h1 id="titulo-produtos">Produtos<span>.</span></h1>
-      <p>Encontre e gerencie os itens do supermercado.</p>
-    </div>
-    <button class="primario" type="button" [disabled]="carregando() || !!falha() || !categorias().length"
-      (click)="abrirForm()"><span aria-hidden="true" class="mais">+</span> Novo produto</button>
+  <header class="catalogo-cabecalho">
+    <h1 id="titulo-produtos">Gestão de Estoque</h1>
+    <p>Cadastre produtos, organize categorias e controle sua operação.</p>
   </header>
+  <nav class="catalogo-abas" aria-label="Seções do catálogo">
+    <a class="aba ativa" routerLink="/produtos" aria-current="page">Produtos <span>{{ produtos().length }}</span></a>
+    <a class="aba" routerLink="/categorias">Categorias <span>{{ categorias().length }}</span></a>
+  </nav>
 
-  @if (aviso()) {
-    <p class="aviso" role="status">{{ aviso() }}</p>
+  @if (filtroEstoqueBaixo()) {
+    <div class="filtro-ativo" role="status">
+      Exibindo produtos com estoque baixo ou zerado.
+      <button type="button" (click)="limparFiltros()">Mostrar todos</button>
+    </div>
   }
+
   @if (!carregando() && !falha() && !categorias().length) {
     <p class="aviso">Cadastre uma <a routerLink="/categorias">categoria</a> para adicionar produtos.</p>
   }
 
-  <div class="painel" [attr.aria-busy]="carregando()">
-    <div class="filtros">
-      <label class="busca">
-        <span>Buscar por nome</span>
-        <span class="campo-busca">
-          <input type="search" placeholder="Ex.: café" [value]="busca()" (input)="busca.set(buscaInput.value)" #buscaInput>
-        </span>
+  <div class="catalogo-painel" [attr.aria-busy]="carregando()">
+    <div class="catalogo-barra">
+      <label class="busca-campo">
+        <span class="sr-only">Buscar produto por nome ou código</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+        <input type="search" placeholder="Buscar produto por nome..." [value]="busca()" (input)="buscar(buscaInput.value)" #buscaInput>
       </label>
-      <label>
-        <span>Categoria</span>
+      <label class="filtro-campo">
+        <span class="sr-only">Filtrar por categoria</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
         <select [value]="categoriaSelecionada() ?? ''" (change)="filtrarCategoria(filtro.value)" #filtro>
-          <option value="">Todas as categorias</option>
+          <option value="">Todos</option>
           @for (item of categorias(); track item.id) {
             <option [value]="item.id" [selected]="item.id === categoriaSelecionada()">{{ item.nome }}</option>
           }
         </select>
       </label>
+      <button class="primario botao-adicionar" type="button" [disabled]="carregando() || !!falha() || !categorias().length"
+        (click)="abrirForm()"><span aria-hidden="true" class="mais">+</span> Novo Produto</button>
     </div>
     @if (carregando()) {
       <div class="estado" role="status">Carregando produtos…</div>
@@ -39,31 +45,43 @@
       <div class="estado"><p role="alert">{{ falha() }}</p><button class="secundario" (click)="carregar()">Tentar de novo</button></div>
     } @else if (!visiveis().length) {
       <div class="estado">
-        @if (busca().trim() || categoriaSelecionada() !== null) {
+        @if (busca().trim() || categoriaSelecionada() !== null || filtroEstoqueBaixo()) {
           <p>Nenhum produto corresponde aos filtros.</p>
-          <button class="secundario" (click)="busca.set(''); filtrarCategoria('')">Limpar filtros</button>
+          <button class="secundario" (click)="limparFiltros()">Limpar filtros</button>
         } @else {
           <p>Nenhum produto cadastrado.</p>
         }
       </div>
     } @else {
       <div class="tabela">
-        <table aria-label="Produtos cadastrados">
-          <thead><tr><th scope="col">Produto</th><th scope="col">Categoria</th><th scope="col" class="preco">Preço</th><th scope="col" class="acoes">Ações</th></tr></thead>
+        <table class="produtos-tabela" aria-label="Produtos cadastrados">
+          <thead><tr><th scope="col">Código</th><th scope="col">Nome do Produto</th><th scope="col">Categoria</th><th scope="col">Preço</th><th scope="col">Qtd. em Estoque</th><th scope="col">Status</th><th scope="col">Ações</th></tr></thead>
           <tbody>
-            @for (item of visiveis(); track item.id) {
+            @for (item of itensPagina(); track item.id) {
               <tr>
-                <th scope="row">
-                  <div class="item">
-                    <span class="selo" aria-hidden="true" [attr.data-cor]="item.categoriaId % 4">{{ iniciais(item.nome) }}</span>
-                    <span class="nome">{{ item.nome }}@if (item.codigoBarras) { <small>{{ item.codigoBarras }}</small> }</span>
+                <td data-campo="Código"><span class="codigo-badge" [attr.title]="codigo(item)">{{ codigo(item) }}</span></td>
+                <th scope="row" data-campo="Produto">
+                  <div class="produto-celula">
+                    <span class="icone-caixa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 2.5 8.5 4.8v9.4L12 21.5l-8.5-4.8V7.3L12 2.5Z"/><path d="m3.5 7.3 8.5 4.8 8.5-4.8M12 12.1v9.4"/></svg></span>
+                    <span class="produto-nome">{{ item.nome }}<small>{{ codigo(item) }}</small></span>
                   </div>
                 </th>
-                <td data-campo="Categoria"><span class="etiqueta">{{ categoriasPorId().get(item.categoriaId) ?? 'Categoria indisponível' }}</span></td>
-                <td class="preco" data-campo="Preço">{{ moeda.format(item.preco) }}</td>
-                <td class="acoes">
-                  <button type="button" class="acao" [attr.aria-label]="'Editar ' + item.nome" (click)="abrirForm(item)">Editar</button>
-                  <button type="button" class="acao excluir" [attr.aria-label]="'Excluir ' + item.nome" (click)="abrirExclusao(item)">Excluir</button>
+                <td data-campo="Categoria">{{ categoriasPorId().get(item.categoriaId) ?? 'Categoria indisponível' }}</td>
+                <td class="valor" data-campo="Preço">{{ moeda.format(item.preco) }}</td>
+                <td class="valor" data-campo="Estoque">{{ item.quantidadeEmEstoque }} un.</td>
+                <td data-campo="Status">
+                  <span class="status-estoque" [class.normal]="item.quantidadeEmEstoque > item.estoqueMinimo"
+                    [class.baixo]="item.quantidadeEmEstoque > 0 && item.quantidadeEmEstoque <= item.estoqueMinimo"
+                    [class.zerado]="item.quantidadeEmEstoque === 0">
+                    <span aria-hidden="true"></span>{{ item.quantidadeEmEstoque === 0 ? 'Sem estoque' : item.quantidadeEmEstoque <= item.estoqueMinimo ? 'Estoque baixo' : 'Normal' }}
+                  </span>
+                </td>
+                <td data-campo="Ações">
+                  <div class="acoes-icones">
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Editar ' + item.nome" title="Editar" (click)="abrirForm(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 16 11-11a2 2 0 0 1 3 3L7 19l-4 1 1-4ZM13 7l4 4M4 22h16"/></svg></button>
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Ver detalhes de ' + item.nome" title="Ver detalhes" (click)="abrirDetalhes(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                    <button type="button" class="acao-icone" [attr.aria-label]="'Excluir ' + item.nome" title="Excluir" (click)="abrirExclusao(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7M10 10v8M14 10v8"/></svg></button>
+                  </div>
                 </td>
               </tr>
             }
@@ -72,55 +90,94 @@
       </div>
     }
     @if (!carregando() && !falha()) {
-      <footer class="rodape" aria-live="polite">{{ visiveis().length }} de {{ produtos().length }} {{ produtos().length === 1 ? 'produto' : 'produtos' }}</footer>
+      <footer class="paginacao" aria-live="polite">
+        <span>Mostrando {{ primeiroItem() }}–{{ ultimoItem() }} de {{ visiveis().length }} itens</span>
+        <nav aria-label="Páginas de produtos">
+          <button type="button" [disabled]="paginaAtual() === 1" (click)="irParaPagina(paginaAtual() - 1)">Anterior</button>
+          @for (numero of paginasVisiveis(); track numero) {
+            <button type="button" [class.atual]="numero === paginaAtual()" [attr.aria-current]="numero === paginaAtual() ? 'page' : null" (click)="irParaPagina(numero)">{{ numero }}</button>
+          }
+          <button type="button" [disabled]="paginaAtual() === totalPaginas()" (click)="irParaPagina(paginaAtual() + 1)">Próximo</button>
+        </nav>
+      </footer>
     }
   </div>
 </section>
 
-<dialog #dialogo aria-labelledby="titulo-dialogo-produto" (cancel)="cancelar($event)">
-  @if (removendo(); as produto) {
-    <div class="dialogo-corpo">
-      <h2 id="titulo-dialogo-produto">Excluir produto?</h2>
-      <p>O item <strong>{{ produto.nome }}</strong> será removido do catálogo.</p>
-      @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
-      <footer class="dialogo-acoes">
+<dialog #dialogo class="catalogo-dialogo" aria-labelledby="titulo-dialogo-produto" (cancel)="cancelar($event)">
+  @if (detalhando(); as produto) {
+    <div class="modal-layout">
+      <header class="modal-cabecalho">
+        <div><h2 id="titulo-dialogo-produto">Detalhes do produto</h2><p>{{ produto.nome }}</p></div>
+        <button type="button" class="modal-fechar" aria-label="Fechar detalhes do produto" (click)="fechar()">×</button>
+      </header>
+      <dl class="detalhes-produto modal-conteudo">
+        <div><dt>Nome do produto</dt><dd>{{ produto.nome }}</dd></div>
+        <div><dt>Categoria</dt><dd>{{ categoriasPorId().get(produto.categoriaId) ?? 'Categoria indisponível' }}</dd></div>
+        <div><dt>Preço</dt><dd>{{ moeda.format(produto.preco) }}</dd></div>
+        <div><dt>Quantidade em estoque</dt><dd>{{ produto.quantidadeEmEstoque }} unidades</dd></div>
+        <div><dt>Estoque mínimo</dt><dd>{{ produto.estoqueMinimo }} unidades</dd></div>
+        <div><dt>Situação</dt><dd>{{ produto.quantidadeEmEstoque === 0 ? 'Sem estoque' : produto.quantidadeEmEstoque <= produto.estoqueMinimo ? 'Estoque baixo' : 'Em dia' }}</dd></div>
+        <div><dt>Código de barras</dt><dd>{{ produto.codigoBarras || 'Não informado' }}</dd></div>
+      </dl>
+      <footer class="modal-rodape"><button type="button" class="secundario" (click)="fechar()">Fechar</button></footer>
+    </div>
+  } @else if (removendo(); as produto) {
+    <div class="modal-layout">
+      <header class="modal-cabecalho">
+        <div><h2 id="titulo-dialogo-produto">Excluir produto?</h2><p>Confirme a remoção do catálogo.</p></div>
+        <button type="button" class="modal-fechar" aria-label="Fechar exclusão do produto" [disabled]="ocupado()" (click)="fechar()">×</button>
+      </header>
+      <div class="modal-conteudo"><p>O item <strong>{{ produto.nome }}</strong> será removido do catálogo. Seu histórico de movimentações será preservado.</p></div>
+      @if (erroDialogo()) { <p class="erro modal-erro" role="alert">{{ erroDialogo() }}</p> }
+      <footer class="modal-rodape">
         <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()" autofocus>Cancelar</button>
         <button type="button" class="perigo" [disabled]="ocupado()" (click)="excluir(produto)">{{ ocupado() ? 'Excluindo…' : 'Excluir produto' }}</button>
       </footer>
     </div>
   } @else {
-    <form class="dialogo-corpo" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
-      <h2 id="titulo-dialogo-produto">{{ editando() ? 'Editar produto' : 'Novo produto' }}</h2>
-      <p>Preencha nome, categoria e preço.</p>
-      <fieldset [disabled]="ocupado()">
-        <label>Nome
-          <input formControlName="nome" autocomplete="off" maxlength="100" required autofocus
+    <form class="modal-layout" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <header class="modal-cabecalho">
+        <div><h2 id="titulo-dialogo-produto">{{ editando() ? 'Editar produto' : 'Cadastrar novo produto' }}</h2><p>Preencha as informações abaixo.</p></div>
+        <button type="button" class="modal-fechar" aria-label="Fechar formulário de produto" [disabled]="ocupado()" (click)="fechar()">×</button>
+      </header>
+      <fieldset class="modal-conteudo modal-campos" [disabled]="ocupado()">
+        <label class="campo-largo">Nome do produto
+          <input formControlName="nome" autocomplete="off" placeholder="Ex.: Café torrado 500g" maxlength="100" required autofocus
             [attr.aria-invalid]="form.controls.nome.touched && form.controls.nome.invalid" aria-describedby="erro-produto-nome">
           @if (form.controls.nome.touched && form.controls.nome.invalid) { <small class="erro" id="erro-produto-nome">Informe um nome de até 100 caracteres.</small> }
         </label>
-        <div class="dupla">
-          <label>Categoria
-            <select formControlName="categoriaId" required
-              [attr.aria-invalid]="form.controls.categoriaId.touched && form.controls.categoriaId.invalid" aria-describedby="erro-produto-categoria">
-              <option [ngValue]="null">Selecione</option>
-              @for (item of categorias(); track item.id) { <option [ngValue]="item.id">{{ item.nome }}</option> }
-            </select>
-            @if (form.controls.categoriaId.touched && form.controls.categoriaId.invalid) { <small class="erro" id="erro-produto-categoria">Selecione uma categoria.</small> }
-          </label>
-          <label>Preço (R$)
-            <input formControlName="preco" inputmode="decimal" placeholder="0,00" maxlength="16" required
-              [attr.aria-invalid]="form.controls.preco.touched && form.controls.preco.invalid" aria-describedby="erro-produto-preco">
-            @if (form.controls.preco.touched && form.controls.preco.invalid) { <small class="erro" id="erro-produto-preco">Informe um valor a partir de zero, com até 2 casas decimais.</small> }
-          </label>
-        </div>
         <label>Código de barras (opcional)
-          <input formControlName="codigoBarras" autocomplete="off" inputmode="numeric" maxlength="14"
+          <input formControlName="codigoBarras" autocomplete="off" inputmode="numeric" placeholder="8 a 14 dígitos" maxlength="14"
             [attr.aria-invalid]="form.controls.codigoBarras.touched && form.controls.codigoBarras.invalid" aria-describedby="erro-produto-codigo">
           @if (form.controls.codigoBarras.touched && form.controls.codigoBarras.invalid) { <small class="erro" id="erro-produto-codigo">Use de 8 a 14 dígitos.</small> }
         </label>
+        <label>Categoria
+          <select formControlName="categoriaId" required
+            [attr.aria-invalid]="form.controls.categoriaId.touched && form.controls.categoriaId.invalid" aria-describedby="erro-produto-categoria">
+            <option [ngValue]="null">Selecione</option>
+            @for (item of categorias(); track item.id) { <option [ngValue]="item.id">{{ item.nome }}</option> }
+          </select>
+          @if (form.controls.categoriaId.touched && form.controls.categoriaId.invalid) { <small class="erro" id="erro-produto-categoria">Selecione uma categoria.</small> }
+        </label>
+        <label>Preço unitário (R$)
+          <input formControlName="preco" inputmode="decimal" placeholder="0,00" maxlength="16" required
+            [attr.aria-invalid]="form.controls.preco.touched && form.controls.preco.invalid" aria-describedby="erro-produto-preco">
+          @if (form.controls.preco.touched && form.controls.preco.invalid) { <small class="erro" id="erro-produto-preco">Informe um valor a partir de zero, com até 2 casas decimais.</small> }
+        </label>
+        <label>{{ editando() ? 'Estoque atual' : 'Estoque inicial' }}
+          <input formControlName="quantidadeEstoque" inputmode="numeric" placeholder="0" required
+            [attr.aria-invalid]="form.controls.quantidadeEstoque.touched && form.controls.quantidadeEstoque.invalid" aria-describedby="erro-produto-quantidade-estoque">
+          @if (form.controls.quantidadeEstoque.touched && form.controls.quantidadeEstoque.invalid) { <small class="erro" id="erro-produto-quantidade-estoque">Informe um número inteiro a partir de zero.</small> }
+        </label>
+        <label>Estoque mínimo
+          <input formControlName="estoqueMinimo" inputmode="numeric" placeholder="0" required
+            [attr.aria-invalid]="form.controls.estoqueMinimo.touched && form.controls.estoqueMinimo.invalid" aria-describedby="erro-produto-estoque-minimo">
+          @if (form.controls.estoqueMinimo.touched && form.controls.estoqueMinimo.invalid) { <small class="erro" id="erro-produto-estoque-minimo">Informe um número inteiro a partir de zero.</small> }
+        </label>
       </fieldset>
-      @if (erroDialogo()) { <p class="erro" role="alert">{{ erroDialogo() }}</p> }
-      <footer class="dialogo-acoes">
+      @if (erroDialogo()) { <p class="erro modal-erro" role="alert">{{ erroDialogo() }}</p> }
+      <footer class="modal-rodape">
         <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()">Cancelar</button>
         <button type="submit" class="primario" [disabled]="ocupado()">{{ ocupado() ? 'Salvando…' : 'Salvar produto' }}</button>
       </footer>

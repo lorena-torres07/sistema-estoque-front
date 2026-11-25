@@ -1,7 +1,8 @@
-node_modules/
-dist/
-.angular/
-.vercel/
-.env
-.env.*
-!.env.example
+/sistema-estoque-backend
+/node_modules/
+/dist/
+/.angular/
+/.vercel/
+/.env
+/.env.*
+!/.env.example
