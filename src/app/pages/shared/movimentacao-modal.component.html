@@ -1,0 +1,62 @@
+
+<button class="primario botao-adicionar" type="button" (click)="abrirForm()">
+  <span aria-hidden="true" class="mais">+</span> Movimentação
+</button>
+
+
+<dialog #dialogo class="catalogo-dialogo" aria-labelledby="titulo-dialogo-movimentacao" (cancel)="cancelar($event)">
+  <form class="modal-layout" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+    
+    <header class="modal-cabecalho">
+      <div>
+        <h2 id="titulo-dialogo-movimentacao">Registrar movimentação</h2>
+        <p>Preencha as informações de entrada ou saída.</p>
+      </div>
+      <button type="button" class="modal-fechar" aria-label="Fechar formulário" [disabled]="ocupado()" (click)="fechar()">×</button>
+    </header>
+
+    <fieldset class="modal-conteudo modal-campos" [disabled]="ocupado()">
+      
+      <label class="campo-largo">Produto
+        <select formControlName="produtoId" required>
+          <option [ngValue]="null">Selecione um produto</option>
+          @for (item of produtos(); track item.id) {
+            <option [ngValue]="item.id">{{ item.nome }}</option>
+          }
+        </select>
+        @if (form.controls.produtoId.touched && form.controls.produtoId.invalid) {
+          <small class="erro">Selecione um produto.</small>
+        }
+      </label>
+
+      <label>Tipo de movimentação
+        <select formControlName="tipo" required>
+          <option value="ENTRADA">Entrada no estoque</option>
+          <option value="SAIDA">Saída do estoque</option>
+        </select>
+      </label>
+
+      <label>Quantidade
+        <input formControlName="quantidade" inputmode="numeric" placeholder="1" required>
+        @if (form.controls.quantidade.touched && form.controls.quantidade.invalid) {
+          <small class="erro">Informe uma quantidade maior que zero.</small>
+        }
+      </label>
+
+      <label class="campo-largo">Observação (opcional)
+        <input formControlName="observacao" autocomplete="off" placeholder="Ex.: Reposição de fornecedor" maxlength="200">
+      </label>
+
+    </fieldset>
+
+    @if (erroDialogo()) {
+      <p class="erro modal-erro" role="alert">{{ erroDialogo() }}</p>
+    }
+
+    <footer class="modal-rodape">
+      <button type="button" class="secundario" [disabled]="ocupado()" (click)="fechar()">Cancelar</button>
+      <button type="submit" class="primario" [disabled]="ocupado()">Salvar movimentação</button>
+    </footer>
+
+  </form>
+</dialog>
