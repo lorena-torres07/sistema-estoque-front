@@ -2,9 +2,11 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { MovimentacaoModalComponent } from '../pages/shared/movimentacao-modal.component';
 
 @Component({
   selector: 'app-header',
+  imports: [MovimentacaoModalComponent],
   template: `
     <header class="app-header">
       <button type="button" class="menu-abrir" aria-label="Abrir menu lateral" aria-controls="menu-lateral"
@@ -21,6 +23,7 @@ import { filter, map } from 'rxjs';
         <input id="busca-global" type="search" name="busca" placeholder="Buscar produto por nome ou código..." [value]="busca()" (input)="busca.set(campo.value)" #campo>
         <button type="submit" aria-label="Buscar produtos">Buscar</button>
       </form>
+      <app-movimentacao-modal />
     </header>
   `,
 })
